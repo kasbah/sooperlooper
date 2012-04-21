@@ -1025,11 +1025,10 @@ Looper::run (nframes_t offset, nframes_t nframes)
 	if (request_pending) {
 			
 		int state = ports[State];
-		cerr << "state: " << state << endl;
-		cerr << "reqested_cmd: " << requested_cmd << endl;
-		cerr << "undo level before: " << _undos_available << endl;
-		cerr << "redo level before: " << _redos_available << endl;
-		cerr << "undo quirk: " << _undo_quirk << endl;
+		//cerr << "state: " << state << endl;
+		//cerr << "reqested_cmd: " << requested_cmd << endl;
+		//cerr << "undo avail before: " << _undos_available << endl;
+		//cerr << "redo avail before: " << _redos_available << endl;
 		switch(requested_cmd) {
 			case Event::RECORD:
 			case Event::MULTIPLY:
@@ -1065,30 +1064,28 @@ Looper::run (nframes_t offset, nframes_t nframes)
 						 break;
 				}
 				break;
-			case Event::UNDO:
+			case Event::UNDO_TWICE:
 				if (_undos_available > 0) {
 				  _undos_available--;
 				  _redos_available++;
-				}
-				break;
-			case Event::UNDO_TWICE:
+				} //fallthrough intentional
+			case Event::UNDO:
 				if (_undos_available > 0) {
 					_undos_available--;
 					_redos_available++;
-					if (_undos_available > 0) {
-						_undos_available--;
-						_redos_available++;
-					}
 				}
+				if (_undos_available == 0)
+					_undo_quirk = false;
 				break;
 			case Event::REDO:
 				if (_redos_available > 0) {
 					if (_undo_quirk) 
 						_undo_quirk = false;
-					else
+					else {
 						_undos_available++;
-					if (ports[LoopLength] == 0.0) 
-						_undo_quirk = true;
+						if (ports[LoopLength] == 0.0) 
+							_undo_quirk = true;
+					}
 					_redos_available--;
 				}
 				break;
@@ -1098,8 +1095,9 @@ Looper::run (nframes_t offset, nframes_t nframes)
 					_undo_quirk = false;
 					break;
 		}
-		cerr << "undo level after: " << _undos_available << endl;
-		cerr << "redo level after: " << _redos_available << endl;
+		//cerr << "undo quirk after: " << _undo_quirk << endl;
+		//cerr << "undos avail after: " << _undos_available << endl;
+		//cerr << "redos avail after: " << _redos_available << endl;
 		
 		if (ports[Multi] == requested_cmd) {
 			/* defer till next call */
