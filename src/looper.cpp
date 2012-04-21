@@ -92,6 +92,9 @@ Looper::initialize (unsigned int index, unsigned int chan_count, float loopsecs,
 
 	_index = index;
 	_chan_count = chan_count;
+
+	_undos_available = 0;
+	_redos_available = 0;
 	
 	_ok = false;
 	requested_cmd = -1;
@@ -665,6 +668,12 @@ Looper::get_control_value (Event::control_t ctrl)
 	else if (index >= 0 && index < LASTPORT) {
 		return ports[index];
 	}
+	else if (ctrl == Event::UndosAvailable) {
+		return _undos_available;
+	}
+	else if (ctrl == Event::RedosAvailable) {
+		return _redos_available;
+	}
 	else if (ctrl == Event::OutPeakMeter) 
 	{
 		return _output_peak;
@@ -1014,6 +1023,83 @@ Looper::run (nframes_t offset, nframes_t nframes)
 	_running_frames += nframes;
 	
 	if (request_pending) {
+			
+		int state = ports[State];
+		cerr << "state: " << state << endl;
+		cerr << "reqested_cmd: " << requested_cmd << endl;
+		cerr << "undo level before: " << _undos_available << endl;
+		cerr << "redo level before: " << _redos_available << endl;
+		cerr << "undo quirk: " << _undo_quirk << endl;
+		switch(requested_cmd) {
+			case Event::RECORD:
+			case Event::MULTIPLY:
+			case Event::RECORD_OR_OVERDUB:
+			case Event::REPLACE:
+			case Event::OVERDUB:
+			case Event::INSERT:
+				switch(state) {
+					case LooperStateRecording:
+					case LooperStateMultiplying: 
+					case LooperStateInserting: 
+					case LooperStateReplacing: 
+						break;
+					case LooperStateMuted:
+						_undos_available++;
+						_redos_available = 0;
+						if (ports[LoopLength] == 0.0) 
+							_undo_quirk = true;
+						break;
+					case LooperStateOff:
+						cerr << "was off" << endl;
+						_undos_available++;
+						_redos_available = 0;
+						_undo_quirk = true;
+						break;
+					default:
+						_undos_available++;
+						_redos_available = 0;
+						if (_undo_quirk) {
+							_undos_available = 1;
+							_undo_quirk = false;
+						}
+						 break;
+				}
+				break;
+			case Event::UNDO:
+				if (_undos_available > 0) {
+				  _undos_available--;
+				  _redos_available++;
+				}
+				break;
+			case Event::UNDO_TWICE:
+				if (_undos_available > 0) {
+					_undos_available--;
+					_redos_available++;
+					if (_undos_available > 0) {
+						_undos_available--;
+						_redos_available++;
+					}
+				}
+				break;
+			case Event::REDO:
+				if (_redos_available > 0) {
+					if (_undo_quirk) 
+						_undo_quirk = false;
+					else
+						_undos_available++;
+					if (ports[LoopLength] == 0.0) 
+						_undo_quirk = true;
+					_redos_available--;
+				}
+				break;
+			case Event::UNDO_ALL:
+					_redos_available += _undos_available + 1;
+					_undos_available = 0;
+					_undo_quirk = false;
+					break;
+		}
+		cerr << "undo level after: " << _undos_available << endl;
+		cerr << "redo level after: " << _redos_available << endl;
 		
 		if (ports[Multi] == requested_cmd) {
 			/* defer till next call */

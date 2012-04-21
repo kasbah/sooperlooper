@@ -146,6 +146,9 @@ CommandMap::CommandMap()
 	add_output_control("in_peak_meter", Event::InPeakMeter, UnitGeneric, 0.0f, 4.0f);
 	add_output_control("out_peak_meter", Event::OutPeakMeter, UnitGeneric, 0.0f, 4.0f);
 	add_output_control("is_soloed", Event::IsSoloed, UnitBoolean);
+	add_output_control("undos_avail", Event::UndosAvailable, UnitIndexed, 0.0f, 1e6);
+	add_output_control("redos_avail", Event::RedosAvailable, UnitIndexed, 0.0f, 1e6);
+	
 
 	_str_ctrl_map.insert (_output_controls.begin(), _output_controls.end());
 

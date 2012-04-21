@@ -219,7 +219,9 @@ namespace SooperLooper {
 		    PanChannel4,
 		    // Put all new controls at the end to avoid screwing up the order of existing AU sessions (who store these numbers)
 		    ReplaceQuantized,
-		    SendMidiStartOnTrigger
+		    SendMidiStartOnTrigger,
+				UndosAvailable,
+				RedosAvailable
 	    } Control;
 	    
 	    int8_t  Instance;

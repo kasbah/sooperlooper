@@ -179,6 +179,12 @@ class Looper
 	float              _output_peak;
 	float              _falloff_per_sample;
 	
+	// these just track the available undos/redos to output via OSC
+	int _undos_available;
+	int _redos_available;
+	// needed because you can't undo an initial recording after doing another operation
+	bool _undo_quirk; 
+
 	LADSPA_Data         _slave_sync_port;
 	LADSPA_Data         _slave_dummy_port;
 
