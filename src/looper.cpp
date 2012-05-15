@@ -1382,10 +1382,6 @@ Looper::run_loops (nframes_t offset, nframes_t nframes)
 	for (unsigned int i=0; i < _chan_count; ++i)
 	{
 
-		if (_panner && _use_common_outs) {
-			// mix this output into common outputs
-			(*_panner)[i]->distribute (outbufs[i], com_obufs, 1.0f, nframes);
-		} 
 
 		if (_have_discrete_io && real_inbufs[i]) {
 			// just mix the dry into the outputs
@@ -1397,6 +1393,11 @@ Looper::run_loops (nframes_t offset, nframes_t nframes)
 				outbufs[i][pos] += currdry * real_inbufs[i][pos];
 			}
 		}
+
+		if (_panner && _use_common_outs) {
+			// mix this output into common outputs
+			(*_panner)[i]->distribute (outbufs[i], com_obufs, 1.0f, nframes);
+		} 
 
 		// calculate output peak post mixing with dry
 		compute_peak (outbufs[i], nframes, _output_peak);
@@ -1941,18 +1942,23 @@ Looper::set_state (const XMLNode& node)
 
 	// load audio if we should
 	if ((prop = node.property ("loop_audio")) != 0) {
-	   ports[State] = LooperStatePaused; // force this
-	   if (!load_loop(prop->value())) {
-		   // use the basename of the filename with the path of the session file
-		   string filename = prop->value();
+		ports[State] = LooperStatePaused; // force this
+		if (!load_loop(prop->value())) {
+			// use the filename with the path of the session file
+			string filename = prop->value().c_str();
 
-		   if ((prop = node.property("session_filename")) != 0) {
-			   string sessfilename = prop->value();
-			   string newfilename = string(::dirname((char *)sessfilename.c_str())) + string("/") + string(::basename((char *)filename.c_str()));
+			if ((prop = node.property("session_filename")) != 0) {
+				//explicitly make a copy as dirname modifies it's input
+				const char * sessfilename = prop->value().c_str();
+				char * modifiable_copy = (char *)malloc(strlen(sessfilename) + 1);
+				strcpy(modifiable_copy, sessfilename);
+				char * directory = dirname(modifiable_copy);
+				string newfilename = string(directory) + string("/") + filename;
 
-			   load_loop(newfilename);
-		   }
-	   }
+				load_loop(newfilename);
+				free (modifiable_copy);
+			}
+		}
 	}
 
 	return 0;
